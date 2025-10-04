@@ -1,0 +1,102 @@
+import { useState, useEffect } from "react";
+import axios from "axios";
+
+export default function App() {
+  const [username, setUsername] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [players, setPlayers] = useState([]);
+  const [amount, setAmount] = useState("");
+  const [loanAmount, setLoanAmount] = useState("");
+
+  // 🟢 Login
+  const handleLogin = async () => {
+    await axios.post("http://localhost:5000/login", { username });
+    setLoggedIn(true);
+    fetchBalance();
+    fetchPlayers();
+  };
+
+  // 🟡 Fetch Balance
+  const fetchBalance = async () => {
+    const res = await axios.get(`http://localhost:5000/balance/${username}`);
+    setBalance(res.data.balance);
+  };
+
+  // 🟣 Fetch All Players
+  const fetchPlayers = async () => {
+    const res = await axios.get("http://localhost:5000/players");
+    setPlayers(res.data);
+  };
+
+  // 🟠 Send Money
+  const sendMoney = async (to) => {
+    await axios.post("http://localhost:5000/send", { from: username, to, amount: parseInt(amount) });
+    fetchBalance();
+  };
+
+  // 🔵 Take Loan
+  const takeLoan = async () => {
+    await axios.post("http://localhost:5000/loan", { username, amount: parseInt(loanAmount) });
+    fetchBalance();
+  };
+
+  useEffect(() => {
+    if (loggedIn) {
+      fetchBalance();
+      fetchPlayers();
+    }
+  }, [loggedIn]);
+
+  if (!loggedIn) {
+    return (
+      <div className="flex flex-col items-center mt-20">
+        <h1 className="text-2xl mb-4">Enter Your Username</h1>
+        <input
+          className="border p-2"
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Your username"
+        />
+        <button className="bg-blue-600 text-white p-2 mt-2" onClick={handleLogin}>
+          Login
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-lg mx-auto">
+      <h2 className="text-2xl font-bold text-center mb-4">🏦 Monopoly Bank</h2>
+      <div className="text-center text-xl mb-4">👤 {username}</div>
+      <div className="text-center text-3xl font-bold mb-6">💰 Balance: {balance} RFY</div>
+
+      <h3 className="text-xl mb-2">📤 Send Money</h3>
+      <input
+        className="border p-2 w-full mb-2"
+        placeholder="Amount"
+        onChange={(e) => setAmount(e.target.value)}
+      />
+      {players
+        .filter((p) => p.username !== username)
+        .map((p) => (
+          <button
+            key={p.username}
+            className="bg-green-600 text-white p-2 w-full mb-2"
+            onClick={() => sendMoney(p.username)}
+          >
+            Send to {p.username}
+          </button>
+        ))}
+
+      <h3 className="text-xl mt-6 mb-2">💸 Take Loan</h3>
+      <input
+        className="border p-2 w-full mb-2"
+        placeholder="Loan Amount"
+        onChange={(e) => setLoanAmount(e.target.value)}
+      />
+      <button className="bg-purple-600 text-white p-2 w-full" onClick={takeLoan}>
+        Get Loan with Interest
+      </button>
+    </div>
+  );
+}
